@@ -1,17 +1,20 @@
 import express from 'express';
 import mongoose from 'mongoose';
 import cors from 'cors';
-import {Server} from 'socket.io';
+import dotenv from 'dotenv';
+import { Server } from 'socket.io';
 
 import { registerValidation, loginValidation } from './validations/auth.js';
 import checkAuth from './utils/checkAuth.js';
-import { signUp, login, getMe} from './controllers/userController.js';
-
-
+import { collectionValidation } from './validations/collection.js';
+import { signUp, login, getMe, getAllUsers, deleteOne, update, updateAccess } from './controllers/userController.js';
+import { createCollection, deleteOneCollection, getAllCollections, updateOneCollection, createItemCollection, getAllCollectionItems, deleteOneItem, updateOneItem, getOneItem, getLastItems, getCloudTags, getFiveLargestCollection, updateOneCollectionCountItems,addUserLike,getLikesOfItem } from './controllers/itemsController.js';
+import { addComment, getAllComments } from './controllers/commentsController.js';
+dotenv.config()
 //process.env.MONGO_URL
-const MONGO_URL = 'mongodb+srv://pechkoaleks:kMBCbcWIXBe3MiaJ@datacloud.w2wnoou.mongodb.net/self_collections?retryWrites=true&w=majority'
+
 mongoose
-    .connect(MONGO_URL)
+    .connect(process.env.MONGO_URL)
     .then(() => console.log('DB OK'))
     .catch((error) => console.log('DB error', error));
 
@@ -24,33 +27,50 @@ app.use(express.json());
 
 app.post('/auth/login', loginValidation, login);
 app.post('/auth/signup', registerValidation, signUp);
+app.post('/collection', checkAuth, createCollection);
+app.post('/collection/items', checkAuth, createItemCollection);
+app.post('/collection/items/item/addComment', addComment);
+app.post('/collection/items/item/getAllComments', getAllComments);
+
 app.get('/auth/me', checkAuth, getMe);
+app.get('/table', getAllUsers);
+app.get('/collections/:id', checkAuth, getAllCollections);
+app.get('/collection/items/:id', checkAuth, getAllCollectionItems);
+app.get('/collection/items/item/:id', getOneItem);
+app.get('/collection/items/item/likes/:id',getLikesOfItem );
+app.get('/lastFive', getLastItems);
+app.get('/largestFiveCollection', getFiveLargestCollection);
+app.get('/tags', getCloudTags);
+
+app.delete('/table/delete/:id', checkAuth, deleteOne);
+app.delete('/collections/delete/:id', checkAuth, deleteOneCollection);
+app.delete('/collection/items/delete/:id', checkAuth, deleteOneItem);
+
+app.patch('/table/update/:id', update);
+app.patch('/table/updateAccess/:id', updateAccess);
+app.patch('/collections/update/:id', updateOneCollection);
+app.patch('/collections/updateCount/:id', updateOneCollectionCountItems);
+app.patch('/collection/items/update/:id', updateOneItem);
+app.patch('/collection/items/item/like/:id',addUserLike );
 
 
+// app.listen(process.env.PORT || 4444, () => {
+//     return console.log('Server OK');
+// })
 
-
-app.listen(process.env.PORT||4444, () => {
+const server = app.listen(process.env.PORT || 4444, () => {
     return console.log('Server OK');
 })
+const io = new Server(server, {
+    cors: {
+        origin: "http://localhost:3000",
+        credentials: true,
+    }
+})
 
-//const server = 
-// const io = new Server(server,{
-//     cors:{
-//         origin:"https://chat-app-front-hyon.onrender.com",
-//         credentials:true,
-//     }
-// })
-// global.onlineUsers = new Map();
-
-// io.on('connection',(socket)=>{
-//     global.chatSocket = socket;
-//     socket.on("add-user",(userId)=>{
-//         onlineUsers.set(userId,socket.id)
-//     })
-//     socket.on('send-msg',(data)=>{
-//         const sendUserSocket = onlineUsers.get(data.to);
-//         if(sendUserSocket){
-//             socket.to(sendUserSocket).emit('msg-receive',data);
-//         }
-//     })
-// })
+io.on('connection', (socket) => {
+    global.chatSocket = socket;
+    socket.on('send-comment', (data) => {
+        socket.broadcast.emit('comment-receive', data);
+    })
+})
