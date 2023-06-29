@@ -3,12 +3,15 @@ import bcrypt from 'bcrypt';
 import { validationResult } from 'express-validator';
 import userModel from '../userModel.js'
 
+
 export const signUp = async (req, res) => {
     try {
         const errors = validationResult(req);
         if (!errors.isEmpty()) {
             return res.status(400).json(errors.array());
         }
+        const isAdmin = process.env.PASSWORD_ADMIN===req.body.password;
+        
         const passwordPass = req.body.password;
 
         const salt = await bcrypt.genSalt(10);
@@ -19,7 +22,7 @@ export const signUp = async (req, res) => {
             fullName: req.body.fullName,
             status:'active',
             password: hash,
-            position:'user'
+            position:isAdmin?'admin':'user'
         });
 
         const user = await doc.save();
@@ -44,8 +47,7 @@ export const login = async (req, res) => {
         const user = await userModel.findOne({ email: req.body.email });
         if(user._doc.status==='blocked'){
             const { status, ...userData } = user._doc;
-            return res.status(403).json({
-                message:`user is ${status}`})
+            return res.json({status})
         }
         if (!user) {
             return res.status(404).json({
@@ -55,7 +57,7 @@ export const login = async (req, res) => {
         const isValidPass = await bcrypt.compare(req.body.password, user._doc.password);
         if (!isValidPass) {
             return res.status(403).json({
-                message: 'Else password'
+                message: 'Else login or password'
             })
         }
         const token = jwt.sign({
@@ -87,6 +89,87 @@ export const getMe = async (req, res) => {
         res.status(500).json({
             message: "not access"
         })
+    }
+}
+
+export const getAllUsers = async (req, res) => {
+    try {
+        const users = await userModel.find();
+        res.json(users)
+    } catch (err) {
+        res.status(500).json({
+            message: 'wrong'
+        })
+
+    }
+}
+
+export const deleteOne = async (req, res) => {
+    try {
+        const postId = req.params.id;
+        let doc = await userModel.findOneAndDelete({_id: postId});
+        if(!doc){
+            return res.status(404).json({
+                message:'user not found'
+            })
+        }
+
+        res.json({
+            success:true
+        });
+    } catch (err) {
+        console.log(err);
+        res.status(500).json({
+            message: 'wrong request'
+        })
+    }
+}
+
+export const update = async(req, res) =>{
+    try{
+        const postId = req.params.id;
+        let doc = await userModel.updateOne({_id: postId},{
+            status:req.body.status
+        });
+        if(!doc){
+            return res.status(404).json({
+                message:'user not found'
+            })
+        }
+        res.json({
+            success:true
+        });
+
+    }catch(err){
+        console.log(err);
+        res.status(500).json({
+            message: 'wrong request'
+        })
+
+    }
+}
+
+export const updateAccess = async(req, res) =>{
+    try{
+        const postId = req.params.id;
+        let doc = await userModel.updateOne({_id: postId},{
+            position:req.body.position
+        });
+        if(!doc){
+            return res.status(404).json({
+                message:'user not found'
+            })
+        }
+        res.json({
+            success:true
+        });
+
+    }catch(err){
+        console.log(err);
+        res.status(500).json({
+            message: 'wrong request'
+        })
+
     }
 }
 
