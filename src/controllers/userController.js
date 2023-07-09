@@ -2,6 +2,7 @@ import jwt from 'jsonwebtoken';
 import bcrypt from 'bcrypt';
 import { validationResult } from 'express-validator';
 import userModel from '../userModel.js'
+import itemsModel from '../itemsModel.js';
 
 
 export const signUp = async (req, res) => {
@@ -10,8 +11,12 @@ export const signUp = async (req, res) => {
         if (!errors.isEmpty()) {
             return res.status(400).json(errors.array());
         }
-        const isAdmin = process.env.PASSWORD_ADMIN===req.body.password;
-        
+        const isUserExist = await userModel.findOne({ email: req.body.email });
+        if (isUserExist) {
+            return res.status(400).json({ message: 'user already exist' })
+        }
+        // const isAdmin = process.env.PASSWORD_ADMIN===req.body.password;
+
         const passwordPass = req.body.password;
 
         const salt = await bcrypt.genSalt(10);
@@ -20,10 +25,11 @@ export const signUp = async (req, res) => {
         const doc = new userModel({
             email: req.body.email,
             fullName: req.body.fullName,
-            status:'active',
+            status: 'active',
             password: hash,
-            position:isAdmin?'admin':'user'
+            position: 'user'
         });
+        //isAdmin?'admin':'user'
 
         const user = await doc.save();
         const token = jwt.sign({
@@ -45,9 +51,9 @@ export const signUp = async (req, res) => {
 export const login = async (req, res) => {
     try {
         const user = await userModel.findOne({ email: req.body.email });
-        if(user._doc.status==='blocked'){
+        if (user._doc.status === 'blocked') {
             const { status, ...userData } = user._doc;
-            return res.json({status})
+            return res.json({ status })
         }
         if (!user) {
             return res.status(404).json({
@@ -83,7 +89,7 @@ export const getMe = async (req, res) => {
                 message: 'not found'
             })
         }
-        const {...userData } = user._doc;
+        const { password, ...userData } = user._doc;
         res.json({ ...userData })
     } catch (err) {
         res.status(500).json({
@@ -107,15 +113,15 @@ export const getAllUsers = async (req, res) => {
 export const deleteOne = async (req, res) => {
     try {
         const postId = req.params.id;
-        let doc = await userModel.findOneAndDelete({_id: postId});
-        if(!doc){
+        let doc = await userModel.findOneAndDelete({ _id: postId });
+        if (!doc) {
             return res.status(404).json({
-                message:'user not found'
+                message: 'user not found'
             })
         }
 
         res.json({
-            success:true
+            success: true
         });
     } catch (err) {
         console.log(err);
@@ -125,22 +131,22 @@ export const deleteOne = async (req, res) => {
     }
 }
 
-export const update = async(req, res) =>{
-    try{
+export const update = async (req, res) => {
+    try {
         const postId = req.params.id;
-        let doc = await userModel.updateOne({_id: postId},{
-            status:req.body.status
+        let doc = await userModel.updateOne({ _id: postId }, {
+            status: req.body.status
         });
-        if(!doc){
+        if (!doc) {
             return res.status(404).json({
-                message:'user not found'
+                message: 'user not found'
             })
         }
         res.json({
-            success:true
+            success: true
         });
 
-    }catch(err){
+    } catch (err) {
         console.log(err);
         res.status(500).json({
             message: 'wrong request'
@@ -149,22 +155,22 @@ export const update = async(req, res) =>{
     }
 }
 
-export const updateAccess = async(req, res) =>{
-    try{
+export const updateAccess = async (req, res) => {
+    try {
         const postId = req.params.id;
-        let doc = await userModel.updateOne({_id: postId},{
-            position:req.body.position
+        let doc = await userModel.updateOne({ _id: postId }, {
+            position: req.body.position
         });
-        if(!doc){
+        if (!doc) {
             return res.status(404).json({
-                message:'user not found'
+                message: 'user not found'
             })
         }
         res.json({
-            success:true
+            success: true
         });
 
-    }catch(err){
+    } catch (err) {
         console.log(err);
         res.status(500).json({
             message: 'wrong request'
@@ -172,8 +178,3 @@ export const updateAccess = async(req, res) =>{
 
     }
 }
-
-
-
-
-
