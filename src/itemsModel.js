@@ -15,7 +15,6 @@ const itemSchema = new Schema(
         custom3FieldOfData: Boolean,
         user:{
             type:mongoose.Schema.Types.ObjectId,
-            ref:'UserModel',
             required:true,   
         }
     },
