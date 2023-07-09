@@ -8,7 +8,7 @@ import { registerValidation, loginValidation } from './validations/auth.js';
 import checkAuth from './utils/checkAuth.js';
 import { collectionValidation } from './validations/collection.js';
 import { signUp, login, getMe, getAllUsers, deleteOne, update, updateAccess } from './controllers/userController.js';
-import { createCollection, deleteOneCollection, getAllCollections, updateOneCollection, createItemCollection, getAllCollectionItems, deleteOneItem, updateOneItem, getOneItem, getLastItems, getCloudTags, getFiveLargestCollection, updateOneCollectionCountItems,addUserLike,getLikesOfItem } from './controllers/itemsController.js';
+import { createCollection, deleteOneCollection, getAllCollections, updateOneCollection, createItemCollection, getAllCollectionItems, deleteOneItem, updateOneItem, getOneItem, getLastItems, getCloudTags, getFiveLargestCollection, updateOneCollectionCountItems,addUserLike,getLikesOfItem,getAllMatchItems,searchItems,searchItemsByComments,searchItemsByCollection } from './controllers/itemsController.js';
 import { addComment, getAllComments } from './controllers/commentsController.js';
 dotenv.config()
 //process.env.MONGO_URL
@@ -33,7 +33,7 @@ app.post('/collection/items/item/addComment', addComment);
 app.post('/collection/items/item/getAllComments', getAllComments);
 
 app.get('/auth/me', checkAuth, getMe);
-app.get('/table', getAllUsers);
+app.get('/adminDashboard', getAllUsers);
 app.get('/collections/:id', checkAuth, getAllCollections);
 app.get('/collection/items/:id', checkAuth, getAllCollectionItems);
 app.get('/collection/items/item/:id', getOneItem);
@@ -41,13 +41,17 @@ app.get('/collection/items/item/likes/:id',getLikesOfItem );
 app.get('/lastFive', getLastItems);
 app.get('/largestFiveCollection', getFiveLargestCollection);
 app.get('/tags', getCloudTags);
+app.get('/search/items/:tag', getAllMatchItems);
+app.get('/search',searchItems);
+app.get('/searchByComments',searchItemsByComments);
+app.get('/searchByCollections',searchItemsByCollection);
 
-app.delete('/table/delete/:id', checkAuth, deleteOne);
+app.delete('/adminDashboard/delete/:id', checkAuth, deleteOne);
 app.delete('/collections/delete/:id', checkAuth, deleteOneCollection);
 app.delete('/collection/items/delete/:id', checkAuth, deleteOneItem);
 
-app.patch('/table/update/:id', update);
-app.patch('/table/updateAccess/:id', updateAccess);
+app.patch('/adminDashboard/update/:id', update);
+app.patch('/adminDashboard/updateAccess/:id', updateAccess);
 app.patch('/collections/update/:id', updateOneCollection);
 app.patch('/collections/updateCount/:id', updateOneCollectionCountItems);
 app.patch('/collection/items/update/:id', updateOneItem);
