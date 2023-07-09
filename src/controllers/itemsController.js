@@ -1,7 +1,9 @@
+import { ObjectId } from "mongodb";
 import collectionModel from "../collectionModel.js";
 import itemsModel from "../itemsModel.js";
 import itemModel from "../itemsModel.js";
 import userModel from "../userModel.js";
+import commentModel from "../commentModel.js";
 
 
 
@@ -11,7 +13,7 @@ export const createCollection = async (req, res) => {
             title: req.body.title,
             description: req.body.description,
             theme: req.body.theme,
-            user: req.userId,
+            user: new ObjectId(req.body.idUser),
         })
         const collection = await doc.save();
         res.json(collection);
@@ -116,9 +118,10 @@ export const createItemCollection = async (req, res) => {
             tags: req.body.tags,
             collectionName: req.body.collectionName,
             usersLike: [],
-            user: req.userId,
+            user: new ObjectId(req.body.idUser),
         })
         const item = await doc.save();
+        console.log(item);
         res.json(item);
     } catch (err) {
         res.status(500).json({
@@ -140,7 +143,7 @@ export const getAllCollectionItems = async (req, res) => {
 
 export const deleteOneItem = async (req, res) => {
     try {
-        //const collection = await collectionModel.findOneAndUpdate({_id:req.body.collectionName},{$inc: {countOfItems: 1}},{new: true});
+        const collection = await collectionModel.findOneAndUpdate({ _id: req.body.collectionName }, { $inc: { countOfItems: -1 } }, { new: true });
         const itemId = req.params.id;
         let docItem = await itemModel.findOneAndDelete({ _id: itemId });
         if (!docItem) {
@@ -206,7 +209,6 @@ export const getLastItems = async (req, res) => {
         const usersFind = lastItems.map((obj) => obj.user.toString());
         const users = await userModel.find({ _id: { $in: usersFind } });
         const collection = await collectionModel.find({ _id: { $in: collectionFind } });
-
         const newItemLastFive = lastItems.map((obj) => {
             let currentObj = {};
             collection.forEach((val, i) => {
@@ -248,23 +250,13 @@ export const getCloudTags = async (req, res) => {
     }
 }
 
-export const getItemTags = async (req, res) => {
-    try {
-        const allItem = await itemModel.find({}).exec();
-        const tags = allItem.map(obj => obj.tags).flat();
-
-        res.json([... new Set(tags)]);
-    } catch (err) {
-        console.log(err);
-        res.status(500).json({
-            message: 'wrong all'
-        })
-    }
-}
 
 export const getFiveLargestCollection = async (req, res) => {
     try {
-        const allCollection = await collectionModel.find().sort({ countOfItems: -1 }).limit(5).exec();
+        const allCollection = await collectionModel.aggregate([
+            { $sort: { countOfItems: -1 } }
+        ]).limit(5);
+
         if (!allCollection) {
             return res.status(404).json({
                 message: 'collection not found'
@@ -284,13 +276,13 @@ export const addUserLike = async (req, res) => {
         const itemId = req.params.id;
         const { idUser, isLiked } = req.body;
         if (!isLiked) {
-            const item = await itemModel.findOne({_id: itemId});
-            const{usersLike,...itemData} = item;
+            const item = await itemModel.findOne({ _id: itemId });
+            const { usersLike, ...itemData } = item;
             console.log(usersLike)
-            const arrayOfLikes = [...usersLike,idUser];
+            const arrayOfLikes = [...usersLike, idUser];
             console.log(arrayOfLikes)
             let doc = await itemModel.updateOne({ _id: itemId }, {
-                usersLike:arrayOfLikes
+                usersLike: arrayOfLikes
             });
             if (!doc) {
                 return res.status(404).json({
@@ -301,10 +293,10 @@ export const addUserLike = async (req, res) => {
                 success: true
             });
         } else {
-            const {usersLike,...itemData} = await itemModel.findOne({_id: itemId});
-            const arrayOfLikes = usersLike.filter(user=>user!==idUser);
+            const { usersLike, ...itemData } = await itemModel.findOne({ _id: itemId });
+            const arrayOfLikes = usersLike.filter(user => user !== idUser);
             let doc = await itemModel.updateOne({ _id: itemId }, {
-                usersLike:arrayOfLikes,
+                usersLike: arrayOfLikes,
             });
             if (!doc) {
                 return res.status(404).json({
@@ -327,15 +319,148 @@ export const addUserLike = async (req, res) => {
 export const getLikesOfItem = async (req, res) => {
     try {
         const itemId = req.params.id;
-        const itemLikes = await itemModel.findOne({_id: itemId});
-        console.log(itemLikes);
+        const itemLikes = await itemModel.findOne({ _id: itemId });
+
         const likes = itemLikes.usersLike;
-        console.log(likes);
+
         res.json(likes);
     } catch (err) {
         console.log(err);
         res.status(500).json({
             message: 'wrong all'
         })
+    }
+}
+
+export const getAllMatchItems = async (req, res) => {
+    try {
+        const tag = `#${req.params.tag}`;
+        let items = await itemModel.aggregate([
+            { $match: { tags: tag } }
+        ])
+        res.json(items);
+    } catch (err) {
+        console.log(err);
+        res.status(500).json({
+            message: 'wrong access'
+        })
+    }
+}
+
+export const searchItems = async (req, res) => {
+    // console.log(req.query.searchText)
+    
+    try {
+        let items;
+        if (req.query.searchText) {
+            items = await itemsModel.aggregate(
+                [
+                    {
+                        '$search': {
+                            "autocomplete": { "query": `${req.query.searchText}`, "path": "title","fuzzy": {
+                                "maxEdits": 2,
+                                "prefixLength": 3
+                            } }
+                        }
+                    }, {
+                        '$limit': 5
+                    }, {
+                        '$project': {
+                            '_id': 1,
+                            'title': 1
+                        }
+                    }
+                ]
+            );
+        } else {
+            // console.log('here')
+            items = await itemsModel.find().sort({ createdAt: 'desc' });
+        }
+        res.json(items);
+    } catch (err) {
+        console.log(err);
+        res.status(500).json({
+            message: 'wrong request'
+        })
+
+    }
+}
+
+export const searchItemsByComments = async (req, res) => {
+    console.log(req.query.searchText)
+    try {
+        let items;
+        if (req.query.searchText) {
+            items = await commentModel.aggregate(
+                [
+                    {
+                      '$search': {
+                        'index': 'searchByComment', 
+                        'text': {
+                          'query': `${req.query.searchText}`, 
+                          'path': 'message.text'
+                        }
+                      }
+                    }
+                  ]
+            );
+        } else {
+            console.log('here')
+            items = await commentModel.find().sort({ createdAt: 'desc' });
+        }
+
+        const itemsByComment = await Promise.all(items.map(
+            item => itemModel.find({
+                _id: item.users[1]
+            },{ _id: 1, title: 1 })
+        ))
+        
+       
+        console.log(itemsByComment.flat());
+        res.json(itemsByComment.flat());
+    } catch (err) {
+        console.log(err);
+        res.status(500).json({
+            message: 'wrong request'
+        })
+
+    }
+}
+
+export const searchItemsByCollection = async (req, res) => {
+    console.log(req.query.searchText)
+    try {
+        let collections=[];
+        if (req.query.searchText) {
+            collections = await collectionModel.aggregate(
+                [
+                    {
+                      '$search': {
+                        'index': 'searchByCollection', 
+                        'text': {
+                          'query': `${req.query.searchText}`, 
+                          'path': 'title'
+                        }
+                      }
+                    }
+                  ]
+            );
+        }
+
+        const itemsByCollection = await Promise.all(collections.map(
+            collection => itemModel.find({
+                collectionName: collection._id
+            },{ _id: 1, title: 1 }).sort({ _id: -1 }).limit(1)
+        ))
+        
+       
+        console.log(itemsByCollection.flat());
+        res.json(itemsByCollection.flat());
+    } catch (err) {
+        console.log(err);
+        res.status(500).json({
+            message: 'wrong request'
+        })
+
     }
 }
