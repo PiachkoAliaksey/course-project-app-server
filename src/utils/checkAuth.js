@@ -2,7 +2,7 @@ import jwt from 'jsonwebtoken';
 import express from 'express';
 
 
-export default (req , res, next) => {
+export default (req, res, next) => {
     const token = (req.headers.authorization || '').replace(/Bearer\s?/, '');
     if (token) {
         try {
