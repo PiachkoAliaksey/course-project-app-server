@@ -6,16 +6,12 @@ const itemSchema = new Schema(
     {
         title: { type: String, required: true },
         tags: { type: Array, default: [] },
-        collectionName:{ type: String, required: true },
-        usersLike:{ type: Array, default: [] },
-        custom3FieldOfInteger: Boolean,
-        custom3FieldOfText: Boolean,
-        custom3FieldOfLargeText: Boolean,
-        custom3FieldOfCheckBox: Boolean,
-        custom3FieldOfData: Boolean,
-        user:{
-            type:mongoose.Schema.Types.ObjectId,
-            required:true,   
+        collectionName: { type: String, required: true },
+        customFields: { type: Array, default: [] },
+        usersLike: { type: Array, default: [] },
+        user: {
+            type: mongoose.Schema.Types.ObjectId,
+            required: true,
         }
     },
     { timestamps: true, }
