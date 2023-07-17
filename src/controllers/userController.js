@@ -3,6 +3,7 @@ import bcrypt from 'bcrypt';
 import { validationResult } from 'express-validator';
 import userModel from '../userModel.js'
 import itemsModel from '../itemsModel.js';
+import collectionModel from '../collectionModel.js';
 
 
 export const signUp = async (req, res) => {
@@ -112,8 +113,10 @@ export const getAllUsers = async (req, res) => {
 
 export const deleteOne = async (req, res) => {
     try {
-        const postId = req.params.id;
-        let doc = await userModel.findOneAndDelete({ _id: postId });
+        const userId = req.params.id;
+        let doc = await userModel.findOneAndDelete({ _id: userId });
+        let collection = await collectionModel.deleteMany({ user: userId });
+        let items = await itemsModel.deleteMany({ user: userId });
         if (!doc) {
             return res.status(404).json({
                 message: 'user not found'
