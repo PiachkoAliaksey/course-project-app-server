@@ -8,7 +8,7 @@ import { registerValidation, loginValidation } from './validations/auth.js';
 import checkAuth from './utils/checkAuth.js';
 import { collectionValidation } from './validations/collection.js';
 import { signUp, login, getMe, getAllUsers, deleteOne, update, updateAccess } from './controllers/userController.js';
-import { createCollection, deleteOneCollection, getAllCollections, updateOneCollection, createItemCollection, getAllCollectionItems, deleteOneItem, updateOneItem, getOneItem, getLastItems, getCloudTags, getFiveLargestCollection, updateOneCollectionCountItems,addUserLike,getLikesOfItem,getAllMatchItems,searchItems,searchItemsByComments,searchItemsByCollection } from './controllers/itemsController.js';
+import { createCollection, deleteOneCollection, getAllCollections, updateOneCollection, createItemCollection, getAllCollectionItems, deleteOneItem, updateOneItem, getOneItem, getLastItems, getCloudTags, getFiveLargestCollection, updateOneCollectionCountItems, addUserLike, getLikesOfItem, getAllMatchItems, searchItems, searchItemsByComments, searchItemsByCollection, getCustomFieldsCollection, createCollectionWithCustomField } from './controllers/itemsController.js';
 import { addComment, getAllComments } from './controllers/commentsController.js';
 dotenv.config()
 //process.env.MONGO_URL
@@ -28,6 +28,7 @@ app.use(express.json());
 app.post('/auth/login', loginValidation, login);
 app.post('/auth/signup', registerValidation, signUp);
 app.post('/collection', checkAuth, createCollection);
+app.post('/collectionWithCustomField', checkAuth, createCollectionWithCustomField);
 app.post('/collection/items', checkAuth, createItemCollection);
 app.post('/collection/items/item/addComment', addComment);
 app.post('/collection/items/item/getAllComments', getAllComments);
@@ -37,14 +38,15 @@ app.get('/adminDashboard', getAllUsers);
 app.get('/collections/:id', checkAuth, getAllCollections);
 app.get('/collection/items/:id', checkAuth, getAllCollectionItems);
 app.get('/collection/items/item/:id', getOneItem);
-app.get('/collection/items/item/likes/:id',getLikesOfItem );
+app.get('/collection/items/item/likes/:id', getLikesOfItem);
 app.get('/lastFive', getLastItems);
 app.get('/largestFiveCollection', getFiveLargestCollection);
 app.get('/tags', getCloudTags);
 app.get('/search/items/:tag', getAllMatchItems);
-app.get('/search',searchItems);
-app.get('/searchByComments',searchItemsByComments);
-app.get('/searchByCollections',searchItemsByCollection);
+app.get('/search', searchItems);
+app.get('/searchByComments', searchItemsByComments);
+app.get('/searchByCollections', searchItemsByCollection);
+app.get('/collection/itemsCustomFields/:id', checkAuth, getCustomFieldsCollection);
 
 app.delete('/adminDashboard/delete/:id', checkAuth, deleteOne);
 app.delete('/collections/delete/:id', checkAuth, deleteOneCollection);
@@ -55,12 +57,9 @@ app.patch('/adminDashboard/updateAccess/:id', updateAccess);
 app.patch('/collections/update/:id', updateOneCollection);
 app.patch('/collections/updateCount/:id', updateOneCollectionCountItems);
 app.patch('/collection/items/update/:id', updateOneItem);
-app.patch('/collection/items/item/like/:id',addUserLike );
+app.patch('/collection/items/item/like/:id', addUserLike);
 
 
-// app.listen(process.env.PORT || 4444, () => {
-//     return console.log('Server OK');
-// })
 
 const server = app.listen(process.env.PORT || 4444, () => {
     return console.log('Server OK');
