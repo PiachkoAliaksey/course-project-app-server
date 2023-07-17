@@ -25,6 +25,25 @@ export const createCollection = async (req, res) => {
     }
 }
 
+export const createCollectionWithCustomField = async (req, res) => {
+    try {
+        const doc = new collectionModel({
+            title: req.body.title,
+            description: req.body.description,
+            theme: req.body.theme,
+            customFields: req.body.customFields,
+            user: new ObjectId(req.body.idUser),
+        })
+        const collection = await doc.save();
+        res.json(collection);
+    } catch (err) {
+        console.log(err);
+        res.status(500).json({
+            message: 'wrong'
+        })
+    }
+}
+
 export const getAllCollections = async (req, res) => {
     try {
         const userId = req.params.id;
@@ -117,11 +136,11 @@ export const createItemCollection = async (req, res) => {
             title: req.body.title,
             tags: req.body.tags,
             collectionName: req.body.collectionName,
+            customFields: req.body.customFields ? req.body.customFields : [],
             usersLike: [],
             user: new ObjectId(req.body.idUser),
         })
         const item = await doc.save();
-        console.log(item);
         res.json(item);
     } catch (err) {
         res.status(500).json({
@@ -132,8 +151,19 @@ export const createItemCollection = async (req, res) => {
 export const getAllCollectionItems = async (req, res) => {
     try {
         const collectionId = req.params.id;
-        let doc = await itemModel.find({ collectionName: collectionId });
-        res.json(doc);
+        let items = await itemModel.find({ collectionName: collectionId });
+        res.json(items);
+    } catch (err) {
+        res.status(500).json({
+            message: 'wrong access'
+        })
+    }
+}
+export const getCustomFieldsCollection = async (req, res) => {
+    try {
+        const collectionId = req.params.id;
+        let collectionCustomFields = await collectionModel.findOne({ _id: collectionId }, { customFields: 1 })
+        res.json(collectionCustomFields.customFields);
     } catch (err) {
         res.status(500).json({
             message: 'wrong access'
@@ -193,7 +223,6 @@ export const getOneItem = async (req, res) => {
     try {
         const itemId = req.params.id;
         let doc = await itemModel.findOne({ _id: itemId });
-        console.log(doc);
         res.json(doc);
     } catch (err) {
         res.status(500).json({
@@ -278,9 +307,7 @@ export const addUserLike = async (req, res) => {
         if (!isLiked) {
             const item = await itemModel.findOne({ _id: itemId });
             const { usersLike, ...itemData } = item;
-            console.log(usersLike)
             const arrayOfLikes = [...usersLike, idUser];
-            console.log(arrayOfLikes)
             let doc = await itemModel.updateOne({ _id: itemId }, {
                 usersLike: arrayOfLikes
             });
@@ -348,8 +375,6 @@ export const getAllMatchItems = async (req, res) => {
 }
 
 export const searchItems = async (req, res) => {
-    // console.log(req.query.searchText)
-    
     try {
         let items;
         if (req.query.searchText) {
@@ -357,10 +382,12 @@ export const searchItems = async (req, res) => {
                 [
                     {
                         '$search': {
-                            "autocomplete": { "query": `${req.query.searchText}`, "path": "title","fuzzy": {
-                                "maxEdits": 2,
-                                "prefixLength": 3
-                            } }
+                            "autocomplete": {
+                                "query": `${req.query.searchText}`, "path": "title", "fuzzy": {
+                                    "maxEdits": 2,
+                                    "prefixLength": 3
+                                }
+                            }
                         }
                     }, {
                         '$limit': 5
@@ -373,7 +400,6 @@ export const searchItems = async (req, res) => {
                 ]
             );
         } else {
-            // console.log('here')
             items = await itemsModel.find().sort({ createdAt: 'desc' });
         }
         res.json(items);
@@ -387,36 +413,31 @@ export const searchItems = async (req, res) => {
 }
 
 export const searchItemsByComments = async (req, res) => {
-    console.log(req.query.searchText)
     try {
         let items;
         if (req.query.searchText) {
             items = await commentModel.aggregate(
                 [
                     {
-                      '$search': {
-                        'index': 'searchByComment', 
-                        'text': {
-                          'query': `${req.query.searchText}`, 
-                          'path': 'message.text'
+                        '$search': {
+                            'index': 'searchByComment',
+                            'text': {
+                                'query': `${req.query.searchText}`,
+                                'path': 'message.text'
+                            }
                         }
-                      }
                     }
-                  ]
+                ]
             );
         } else {
-            console.log('here')
             items = await commentModel.find().sort({ createdAt: 'desc' });
         }
 
         const itemsByComment = await Promise.all(items.map(
             item => itemModel.find({
                 _id: item.users[1]
-            },{ _id: 1, title: 1 })
+            }, { _id: 1, title: 1 })
         ))
-        
-       
-        console.log(itemsByComment.flat());
         res.json(itemsByComment.flat());
     } catch (err) {
         console.log(err);
@@ -428,33 +449,29 @@ export const searchItemsByComments = async (req, res) => {
 }
 
 export const searchItemsByCollection = async (req, res) => {
-    console.log(req.query.searchText)
     try {
-        let collections=[];
+        let collections = [];
         if (req.query.searchText) {
             collections = await collectionModel.aggregate(
                 [
                     {
-                      '$search': {
-                        'index': 'searchByCollection', 
-                        'text': {
-                          'query': `${req.query.searchText}`, 
-                          'path': 'title'
+                        '$search': {
+                            'index': 'searchByCollection',
+                            'text': {
+                                'query': `${req.query.searchText}`,
+                                'path': 'title'
+                            }
                         }
-                      }
                     }
-                  ]
+                ]
             );
         }
 
         const itemsByCollection = await Promise.all(collections.map(
             collection => itemModel.find({
                 collectionName: collection._id
-            },{ _id: 1, title: 1 }).sort({ _id: -1 }).limit(1)
+            }, { _id: 1, title: 1 }).sort({ _id: -1 }).limit(1)
         ))
-        
-       
-        console.log(itemsByCollection.flat());
         res.json(itemsByCollection.flat());
     } catch (err) {
         console.log(err);
