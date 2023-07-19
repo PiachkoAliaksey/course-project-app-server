@@ -269,7 +269,6 @@ export const getCloudTags = async (req, res) => {
     try {
         const allItem = await itemModel.find().exec();
         const tags = allItem.map(obj => obj.tags).flat();
-
         res.json([... new Set(tags)]);
     } catch (err) {
         console.log(err);
