@@ -101,7 +101,7 @@ export const getMe = async (req, res) => {
 
 export const getAllUsers = async (req, res) => {
     try {
-        const users = await userModel.find();
+        const users = await userModel.find().sort({fullName:1});
         res.json(users)
     } catch (err) {
         res.status(500).json({
