@@ -66,11 +66,11 @@ const server = app.listen(process.env.PORT || 4444, () => {
 })
 const io = new Server(server, {
     cors: {
-        origin: "http://localhost:3000",
+        origin: "https://self-collection-front.onrender.com",
         credentials: true,
     }
 })
-//"http://localhost:3000"
+
 
 io.on('connection', (socket) => {
     global.chatSocket = socket;
