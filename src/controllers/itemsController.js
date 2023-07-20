@@ -84,6 +84,7 @@ export const updateOneCollection = async (req, res) => {
         let doc = await collectionModel.updateOne({ _id: postId }, {
             title: req.body.title,
             description: req.body.description,
+            customFields:req.body.customFields,
             theme: req.body.theme,
             user: req.userId,
         });
@@ -198,6 +199,7 @@ export const updateOneItem = async (req, res) => {
         let doc = await itemModel.updateOne({ _id: itemId }, {
             title: req.body.title,
             tags: req.body.tags,
+            customFields:req.body.customFields,
             collectionName: req.body.collectionName,
             user: req.userId,
         });
